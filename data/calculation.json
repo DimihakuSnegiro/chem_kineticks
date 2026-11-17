@@ -1,0 +1,23 @@
+{
+  "calculation": {
+    "mode": "fixed_density_internal_energy",
+    "velocity_m_s": 1.0,
+    "density_kg_m3": 0.18,
+    "pressure_pa": 101325.0,
+    "temperature_k": 1100.0,
+    "output_intervals": 10000,
+    "output_interval": 1e-06,
+    "use_tabulated_reverse_rates": false
+  },
+  "initial_composition": {
+    "H2": 0.6667,
+    "OH": 0.0,
+    "H2O": 0.0,
+    "O2": 0.3333,
+    "H2O2": 0.0,
+    "HO2": 0.0,
+    "H": 0.0,
+    "O": 0.0,
+    "N2": 0.5
+  }
+}

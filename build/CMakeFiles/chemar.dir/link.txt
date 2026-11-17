@@ -1,0 +1,3 @@
+C:\Strawberry\c\bin\cmake.exe -E rm -f CMakeFiles\chemar.dir/objects.a
+C:\Strawberry\c\bin\ar.exe qc CMakeFiles\chemar.dir/objects.a @CMakeFiles\chemar.dir\objects1.rsp
+C:\Strawberry\c\bin\g++.exe -O3 -DNDEBUG -municode -static -Wl,--whole-archive CMakeFiles\chemar.dir/objects.a -Wl,--no-whole-archive -o chemar.exe -Wl,--out-implib,libchemar.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\chemar.dir\linkLibs.rsp
