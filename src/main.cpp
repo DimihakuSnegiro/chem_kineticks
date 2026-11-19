@@ -3,7 +3,18 @@
 #include <iomanip>
 #include <iostream>
 
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
+
 int main(int argc, char** argv) {
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+#endif
+
     try {
         if (argc > 2) {
             std::cerr << "Использование: chemar [каталог_данных]\n";

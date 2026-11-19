@@ -27,6 +27,53 @@ static size_t positive_integer(const YAML::Node& n) {
     return size_t(v);
 }
 
+static int find_species(const std::map<std::string, int>& index, const std::string& name) {
+    auto it = index.find(name);
+
+    if (it == index.end()) {
+        throw std::runtime_error("Неизвестное вещество: " + name);
+    }
+
+    return it->second;
+}
+
+static std::vector<Term> terms(const YAML::Node& n,
+                               const std::map<std::string, int>& index) {
+    std::vector<Term> result;
+    std::set<int> seen;
+
+    for (const auto& item : n) {
+        const int i = find_species(index, item.first.as<std::string>());
+        const int v = item.second.as<int>();
+
+        if (v <= 0 || !seen.insert(i).second) {
+            throw std::runtime_error("Некорректный стехиометрический член");
+        }
+
+        result.push_back({i, v});
+    }
+
+    if (result.empty()) {
+        throw std::runtime_error("Пустая сторона реакции");
+    }
+
+    return result;
+}
+
+static Arrhenius arr(const YAML::Node& n) {
+    Arrhenius a{
+        number(n["A"]),
+        number(n["n"]),
+        number(n["activation_temperature_K"])
+    };
+
+    if (a.A < 0) {
+        throw std::runtime_error("Отрицательный предэкспоненциальный множитель Аррениуса");
+    }
+
+    return a;
+}
+
 Input load(const std::filesystem::path& directory) {
     Input in;
     const auto sp = YAML::LoadFile((directory / "species.yaml").string());
@@ -77,52 +124,6 @@ Input load(const std::filesystem::path& directory) {
         in.mechanism.species.push_back(s);
     }
 
-    auto find = [&](const std::string& name) {
-        auto it = index.find(name);
-
-        if (it == index.end()) {
-            throw std::runtime_error("Неизвестное вещество: " + name);
-        }
-
-        return it->second;
-    };
-
-    auto terms = [&](const YAML::Node& n) {
-        std::vector<Term> result;
-        std::set<int> seen;
-
-        for (const auto& item : n) {
-            const int i = find(item.first.as<std::string>());
-            const int v = item.second.as<int>();
-
-            if (v <= 0 || !seen.insert(i).second) {
-                throw std::runtime_error("Некорректный стехиометрический член");
-            }
-
-            result.push_back({i, v});
-        }
-
-        if (result.empty()) {
-            throw std::runtime_error("Пустая сторона реакции");
-        }
-
-        return result;
-    };
-
-    auto arr = [](const YAML::Node& n) {
-        Arrhenius a{
-            number(n["A"]),
-            number(n["n"]),
-            number(n["activation_temperature_K"])
-        };
-
-        if (a.A < 0) {
-            throw std::runtime_error("Отрицательный предэкспоненциальный множитель Аррениуса");
-        }
-
-        return a;
-    };
-
     const auto reactions = YAML::LoadFile((directory / "reactions.yaml").string());
 
     if (reactions["units"].as<std::string>() != "SI_mol_m_s_K") {
@@ -131,8 +132,8 @@ Input load(const std::filesystem::path& directory) {
 
     for (const auto& node : reactions["reactions"]) {
         Reaction r;
-        r.reactants = terms(node["reactants"]);
-        r.products = terms(node["products"]);
+        r.reactants = terms(node["reactants"], index);
+        r.products = terms(node["products"], index);
         r.forward = arr(node["forward"]);
 
         if (node["reverse"]) {
@@ -157,7 +158,7 @@ Input load(const std::filesystem::path& directory) {
                     throw std::runtime_error("Отрицательная эффективность третьего тела");
                 }
 
-                r.efficiencies[find(e.first.as<std::string>())] = v;
+                r.efficiencies[find_species(index, e.first.as<std::string>())] = v;
             }
         }
 
@@ -181,7 +182,7 @@ Input load(const std::filesystem::path& directory) {
     std::set<int> composition;
 
     for (const auto& x : init["mole_fractions"]) {
-        const int i = find(x.first.as<std::string>());
+        const int i = find_species(index, x.first.as<std::string>());
         const double v = number(x.second);
 
         if (v < 0 || !composition.insert(i).second) {

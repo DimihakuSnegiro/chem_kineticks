@@ -5,10 +5,10 @@
 #include <fstream>
 #include <iomanip>
 #include <limits>
+#include <numeric>
 #include <stdexcept>
 
-static std::vector<double> linear_solve(std::vector<std::vector<double>> a,
-                                        std::vector<double> b) {
+static std::vector<double> linear_solve(std::vector<std::vector<double>> a, std::vector<double> b) {
     const size_t n = b.size();
 
     for (size_t k = 0; k < n; ++k) {
@@ -57,39 +57,42 @@ static std::vector<double> linear_solve(std::vector<std::vector<double>> a,
     return x;
 }
 
+static std::vector<double> residual(const State& v, const State& old, double dt,
+                                    const Settings& settings, const std::vector<double>& f0,
+                                    const std::vector<double>& f) {
+    std::vector<double> r(old.c.size());
+
+    for (size_t i = 0; i < old.c.size(); ++i) {
+        r[i] = v.c[i] - old.c[i]
+               - dt * ((1 - settings.theta) * f0[i] + settings.theta * f[i]);
+    }
+
+    return r;
+}
+
+static double residual_norm(const std::vector<double>& r, const State& v,
+                            const State& old, const Settings& settings) {
+    double value = 0;
+
+    for (size_t i = 0; i < old.c.size(); ++i) {
+        value = std::max(value, std::abs(r[i])
+            / (settings.atol + settings.rtol * std::max(old.c[i], v.c[i])));
+    }
+
+    return value;
+}
+
 State implicit_step(const Mechanism& m, const State& old, double dt, double e0,
                     const Settings& settings, bool reverse) {
     State s = old;
     const auto f0 = rates(m, old, reverse).source;
     const size_t n = old.c.size();
 
-    auto residual = [&](const State& v, const std::vector<double>& f) {
-        std::vector<double> r(n);
-
-        for (size_t i = 0; i < n; ++i) {
-            r[i] = v.c[i] - old.c[i]
-                   - dt * ((1 - settings.theta) * f0[i] + settings.theta * f[i]);
-        }
-
-        return r;
-    };
-
-    auto norm = [&](const std::vector<double>& r, const State& v) {
-        double value = 0;
-
-        for (size_t i = 0; i < n; ++i) {
-            value = std::max(value, std::abs(r[i])
-                / (settings.atol + settings.rtol * std::max(old.c[i], v.c[i])));
-        }
-
-        return value;
-    };
-
     for (int it = 0; it < settings.max_newton_iterations; ++it) {
         s.temperature = temperature(m, s.c, e0, s.temperature);
         auto f = rates(m, s, reverse, true);
-        auto r = residual(s, f.source);
-        const double before = norm(r, s);
+        auto r = residual(s, old, dt, settings, f0, f.source);
+        const double before = residual_norm(r, s, old, settings);
 
         if (before <= settings.nonlinear_tolerance) {
             s.time = old.time + dt;
@@ -129,7 +132,9 @@ State implicit_step(const Mechanism& m, const State& old, double dt, double e0,
 
             try {
                 trial.temperature = temperature(m, trial.c, e0, s.temperature);
-                const double after = norm(residual(trial, rates(m, trial, reverse).source), trial);
+                const double after = residual_norm(
+                    residual(trial, old, dt, settings, f0, rates(m, trial, reverse).source),
+                    trial, old, settings);
 
                 if (after < before * (1 - 1e-4 * damping)) {
                     s = trial;
@@ -149,16 +154,86 @@ State implicit_step(const Mechanism& m, const State& old, double dt, double e0,
 }
 
 static void csv_header(std::ofstream& out, const Mechanism& m) {
-    out << "time_s,temperature_K,pressure_Pa,density_kg_m3";
+    out << "time_s,temperature_K,pressure_Pa,density_kg_m3"
+        << ",specific_enthalpy_J_kg,specific_internal_energy_J_kg"
+        << ",specific_entropy_J_kg_K,mean_molar_mass_kg_mol";
 
     for (const auto& s : m.species) {
         out << ",c_" << s.name << "_mol_m3";
     }
 
+    for (const auto& s : m.species) {
+        out << ",mole_fraction_" << s.name;
+    }
+
+    for (const auto& s : m.species) {
+        out << ",mass_fraction_" << s.name;
+    }
+
+    for (size_t j = 0; j < m.reactions.size(); ++j) {
+        out << ",reaction_" << j + 1 << "_forward_mol_m3_s"
+            << ",reaction_" << j + 1 << "_reverse_mol_m3_s"
+            << ",reaction_" << j + 1 << "_net_mol_m3_s";
+    }
+
     out << '\n';
 }
 
-static void csv_row(std::ofstream& out, const State& s) {
+struct CsvDiagnostics {
+    double specific_enthalpy = 0;
+    double specific_internal_energy = 0;
+    double specific_entropy = 0;
+    double mean_molar_mass = 0;
+    std::vector<double> mole_fractions;
+    std::vector<double> mass_fractions;
+    Rates reaction_rates;
+};
+
+static CsvDiagnostics csv_diagnostics(const Mechanism& m, const State& s,
+                                      bool explicit_reverse) {
+    const double total_concentration = std::accumulate(s.c.begin(), s.c.end(), 0.0);
+    const double total_mass = mass(m, s);
+
+    if (!(total_concentration > 0) || !(total_mass > 0)) {
+        throw std::runtime_error("Некорректный состав для вычисления свойств смеси");
+    }
+
+    CsvDiagnostics result;
+    result.mole_fractions.resize(s.c.size());
+    result.mass_fractions.resize(s.c.size());
+    result.specific_internal_energy = energy(m, s) / total_mass;
+    result.mean_molar_mass = total_mass / total_concentration;
+
+    for (size_t i = 0; i < s.c.size(); ++i) {
+        const Thermo th = thermo(m.species[i], s.temperature);
+        result.specific_enthalpy += s.c[i] * th.h;
+
+        if (s.c[i] > 0) {
+            const double partial_pressure = s.c[i] * R * s.temperature;
+            result.specific_entropy += s.c[i]
+                * (th.s - R * std::log(partial_pressure / standard_pressure));
+        }
+
+        result.mole_fractions[i] = s.c[i] / total_concentration;
+        result.mass_fractions[i] = s.c[i] * m.species[i].molar_mass / total_mass;
+    }
+
+    result.specific_enthalpy /= total_mass;
+    result.specific_entropy /= total_mass;
+    result.reaction_rates = rates(m, s, explicit_reverse);
+
+    const double scalar_sum = result.specific_enthalpy + result.specific_internal_energy
+        + result.specific_entropy + result.mean_molar_mass;
+
+    if (!std::isfinite(scalar_sum)) {
+        throw std::runtime_error("Свойства смеси для записи в CSV содержат неконечные числа");
+    }
+
+    return result;
+}
+
+static void csv_row(std::ofstream& out, const Mechanism& m, const State& s,
+                    bool explicit_reverse) {
     const double p = pressure(s);
 
     if (!std::isfinite(s.time + s.temperature + s.density + p)) {
@@ -171,10 +246,31 @@ static void csv_row(std::ofstream& out, const State& s) {
         }
     }
 
-    out << s.time << ',' << s.temperature << ',' << p << ',' << s.density;
+    const CsvDiagnostics diagnostics = csv_diagnostics(m, s, explicit_reverse);
+
+    out << s.time << ',' << s.temperature << ',' << p << ',' << s.density
+        << ',' << diagnostics.specific_enthalpy
+        << ',' << diagnostics.specific_internal_energy
+        << ',' << diagnostics.specific_entropy
+        << ',' << diagnostics.mean_molar_mass;
 
     for (double c : s.c) {
         out << ',' << c;
+    }
+
+    for (double fraction : diagnostics.mole_fractions) {
+        out << ',' << fraction;
+    }
+
+    for (double fraction : diagnostics.mass_fractions) {
+        out << ',' << fraction;
+    }
+
+    for (size_t j = 0; j < diagnostics.reaction_rates.forward.size(); ++j) {
+        out << ',' << diagnostics.reaction_rates.forward[j]
+            << ',' << diagnostics.reaction_rates.reverse[j]
+            << ',' << diagnostics.reaction_rates.forward[j]
+                          - diagnostics.reaction_rates.reverse[j];
     }
 
     out << '\n';
@@ -211,7 +307,7 @@ Statistics integrate(const Input& in) {
     csv_header(out, in.mechanism);
 
     State state = in.initial;
-    csv_row(out, state);
+    csv_row(out, in.mechanism, state, in.explicit_reverse);
 
     const double e0 = energy(in.mechanism, state);
     const double mass0 = mass(in.mechanism, state);
@@ -299,7 +395,7 @@ Statistics integrate(const Input& in) {
         }
 
         if (stats.accepted % in.save_every == 0 || state.time == in.end_time) {
-            csv_row(out, state);
+            csv_row(out, in.mechanism, state, in.explicit_reverse);
         }
 
         dt = std::min(cfg.max_step,

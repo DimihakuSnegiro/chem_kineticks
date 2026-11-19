@@ -197,6 +197,14 @@ static double product(const std::vector<Term>& terms,
     return value;
 }
 
+static double dlogk(const Arrhenius& a, double T) {
+    if (T < 300) {
+        return 1 / T;
+    }
+
+    return a.n / T + a.activation_temperature / (T * T);
+}
+
 Rates rates(const Mechanism& m, const State& s, bool explicit_reverse, bool jacobian) {
     const size_t n = m.species.size();
     Rates result;
@@ -222,15 +230,6 @@ Rates rates(const Mechanism& m, const State& s, bool explicit_reverse, bool jaco
     if (!(cv > 0)) {
         throw std::runtime_error("Неположительная объёмная теплоёмкость");
     }
-
-    auto dlogk = [&](const Arrhenius& a) {
-        if (s.temperature < 300) {
-            return 1 / s.temperature;
-        }
-
-        return a.n / s.temperature
-               + a.activation_temperature / (s.temperature * s.temperature);
-    };
 
     for (size_t j = 0; j < m.reactions.size(); ++j) {
         const auto& r = m.reactions[j];
@@ -270,12 +269,12 @@ Rates rates(const Mechanism& m, const State& s, bool explicit_reverse, bool jaco
         double dr;
 
         if (explicit_reverse && r.reversible) {
-            dr = dlogk(*r.reverse);
+            dr = dlogk(*r.reverse, s.temperature);
         } else {
-            dr = dlogk(r.forward) - du / (R * s.temperature * s.temperature);
+            dr = dlogk(r.forward, s.temperature) - du / (R * s.temperature * s.temperature);
         }
 
-        const double dwdT = wf * dlogk(r.forward) - wr * dr;
+        const double dwdT = wf * dlogk(r.forward, s.temperature) - wr * dr;
 
         for (size_t i = 0; i < n; ++i) {
             double dw = 0;
@@ -331,32 +330,34 @@ double pressure(const State& s) {
     return R * s.temperature * std::accumulate(s.c.begin(), s.c.end(), 0.0);
 }
 
+static std::array<double, 2> energy_residual(const Mechanism& m,
+                                              const std::vector<double>& c,
+                                              double target, double T) {
+    double e = 0;
+    double cv = 0;
+
+    for (size_t i = 0; i < c.size(); ++i) {
+        const auto th = thermo(m.species[i], T);
+        e += c[i] * th.u;
+        cv += c[i] * th.cv;
+    }
+
+    return std::array<double, 2>{e - target, cv};
+}
+
 double temperature(const Mechanism& m, const std::vector<double>& c,
                    double target, double guess) {
     double lo = m.Tmin;
     double hi = m.Tmax;
 
-    auto eval = [&](double T) {
-        double e = 0;
-        double cv = 0;
-
-        for (size_t i = 0; i < c.size(); ++i) {
-            const auto th = thermo(m.species[i], T);
-            e += c[i] * th.u;
-            cv += c[i] * th.cv;
-        }
-
-        return std::array<double, 2>{e - target, cv};
-    };
-
-    if (eval(lo)[0] > 0 || eval(hi)[0] < 0) {
+    if (energy_residual(m, c, target, lo)[0] > 0 || energy_residual(m, c, target, hi)[0] < 0) {
         throw std::runtime_error("Решение уравнения энергии вне термодинамического диапазона");
     }
 
     double T = std::clamp(guess, lo, hi);
 
     for (int it = 0; it < 150; ++it) {
-        const auto v = eval(T);
+        const auto v = energy_residual(m, c, target, T);
 
         if (!(v[1] > 0)) {
             throw std::runtime_error("Неположительная теплоёмкость при решении уравнения энергии");

@@ -5,7 +5,7 @@ mole_fractions:
   H2: 0.6667
   O2: 0.3333
   N2: 0.5
-time_end_s: 0.01
+time_end_s: 1.0e-04
 reverse_rates: thermodynamic
 solver:
   theta: 0.6
@@ -19,4 +19,4 @@ solver:
   max_steps: 2000000
 output:
   csv: output/results.csv
-  save_every: 10
+  save_every: 5
