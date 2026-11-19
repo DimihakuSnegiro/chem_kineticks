@@ -1,6 +1,0 @@
- U            RO       P         T       IPR     out     NNN     DLX     IOBR  IPR= {1 - RoT; 2 - PT, 3 - RoE, 4 - PH, 5 - U,Ro,T}
-1.0D0     0.18D0   101325.D0    1100.D0     3    'r15'    10000    1.e-6     0
-  H2        OH      H2O        O2       H2O2    HO2     H       O     N2
-0.6667D0   0.0D0   0.0D0    0.3333D0 0.0D0   0.0D0  0.0D0   0.0D0 0.5D0
-
-  

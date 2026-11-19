@@ -1,0 +1,368 @@
+units: SI_mol_m_s_K
+source_file: H2_O2_polnaya_tablitsa_bez_oformleniya.xlsx
+source_sheet: H2_O2
+reactions:
+- id: 1
+  reactants:
+    H: 1
+    O2: 1
+  products:
+    OH: 1
+    O: 1
+  reversible: true
+  forward:
+    A: 120000000000.0
+    n: -0.91
+    activation_temperature_K: 8311.0
+  fit_range_K:
+  - 300.0
+  - 2500.0
+  reference:
+    temperature_K: 1000.0
+    forward_rate_constant: 54923.70261003257
+    equilibrium_constant: 0.003992087024388099
+    reverse_rate_constant: 13758142.614251047
+- id: 2
+  reactants:
+    O: 1
+    H2: 1
+  products:
+    OH: 1
+    H: 1
+  reversible: true
+  forward:
+    A: 15.0
+    n: 2.0
+    activation_temperature_K: 3801.0
+  fit_range_K:
+  - 300.0
+  - 2500.0
+  reference:
+    temperature_K: 1000.0
+    forward_rate_constant: 335226.1839895174
+    equilibrium_constant: 0.8311894074456239
+    reverse_rate_constant: 403309.0183616756
+- id: 3
+  reactants:
+    OH: 1
+    H2: 1
+  products:
+    H2O: 1
+    H: 1
+  reversible: true
+  forward:
+    A: 100.0
+    n: 1.6
+    activation_temperature_K: 1660.0
+  fit_range_K:
+  - 300.0
+  - 2500.0
+  reference:
+    temperature_K: 1000.0
+    forward_rate_constant: 1199695.859670278
+    equilibrium_constant: 452.1681832344979
+    reverse_rate_constant: 2653.207156435654
+- id: 4
+  reactants:
+    OH: 2
+  products:
+    H2O: 1
+    O: 1
+  reversible: true
+  forward:
+    A: 1500.0
+    n: 1.14
+    activation_temperature_K: 0.0
+  fit_range_K:
+  - 300.0
+  - 2500.0
+  reference:
+    temperature_K: 1000.0
+    forward_rate_constant: 3945401.98784307
+    equilibrium_constant: 544.0013782467248
+    reverse_rate_constant: 7252.558808874348
+- id: 5
+  reactants:
+    H2: 1
+  products:
+    H: 2
+  reversible: true
+  forward:
+    A: 220000000.0
+    n: 0.0
+    activation_temperature_K: 48349.0
+  third_body:
+    default_efficiency: 1.0
+    efficiencies: {}
+  fit_range_K:
+  - 2500.0
+  - 8000.0
+  reference:
+    temperature_K: 2500.0
+    forward_rate_constant: 0.8776899360868023
+    equilibrium_constant: 0.0030510014825673075
+    reverse_rate_constant: 287.6727333964643
+- id: 6
+  reactants:
+    H: 1
+    OH: 1
+  products:
+    H2O: 1
+  reversible: true
+  forward:
+    A: 140000000000.0
+    n: -2.0
+    activation_temperature_K: 0.0
+  third_body:
+    default_efficiency: 1.0
+    efficiencies: {}
+  fit_range_K:
+  - 1000.0
+  - 3000.0
+  reference:
+    temperature_K: 1000.0
+    forward_rate_constant: 140000.0
+    equilibrium_constant: 7.289832887606247e+18
+    reverse_rate_constant: 1.920482981688372e-14
+- id: 7
+  reactants:
+    O2: 1
+  products:
+    O: 2
+  reversible: true
+  forward:
+    A: 120000000.0
+    n: 0.0
+    activation_temperature_K: 54243.0
+  third_body:
+    default_efficiency: 1.0
+    efficiencies: {}
+  fit_range_K:
+  - 2000.0
+  - 10000.0
+  reference:
+    temperature_K: 2500.0
+    forward_rate_constant: 0.04531135121189602
+    equilibrium_constant: 0.0010098163978353853
+    reverse_rate_constant: 44.87088079479021
+- id: 8
+  reactants:
+    H: 1
+    O2: 1
+  products:
+    HO2: 1
+  reversible: true
+  forward:
+    A: 700000.0
+    n: -0.8
+    activation_temperature_K: 0.0
+  third_body:
+    default_efficiency: 1.0
+    efficiencies: {}
+  fit_range_K:
+  - 300.0
+  - 2000.0
+  reference:
+    temperature_K: 1000.0
+    forward_rate_constant: 2786.7501938744804
+    equilibrium_constant: 131891.73236664396
+    reverse_rate_constant: 0.02112907415703384
+- id: 9
+  reactants:
+    H: 1
+    HO2: 1
+  products:
+    OH: 2
+  reversible: true
+  forward:
+    A: 150000000.0
+    n: 0.0
+    activation_temperature_K: 505.0
+  fit_range_K:
+  - 300.0
+  - 1000.0
+  reference:
+    temperature_K: 1000.0
+    forward_rate_constant: 90525836.31405608
+    equilibrium_constant: 405601917.9899145
+    reverse_rate_constant: 0.22318887633146514
+- id: 10
+  reactants:
+    H: 1
+    HO2: 1
+  products:
+    H2: 1
+    O2: 1
+  reversible: true
+  forward:
+    A: 25000000.0
+    n: 0.0
+    activation_temperature_K: 349.0
+  fit_range_K:
+  - 300.0
+  - 1000.0
+  reference:
+    temperature_K: 1000.0
+    forward_rate_constant: 17634828.25674886
+    equilibrium_constant: 122236244927.87201
+    reverse_rate_constant: 0.00014426840637287778
+- id: 11
+  reactants:
+    O: 1
+    HO2: 1
+  products:
+    OH: 1
+    O2: 1
+  reversible: true
+  forward:
+    A: 20000000.0
+    n: 0.0
+    activation_temperature_K: 0.0
+  fit_range_K:
+  - 300.0
+  - 1000.0
+  reference:
+    temperature_K: 1000.0
+    forward_rate_constant: 20000000.0
+    equilibrium_constant: 101601471989.97609
+    reverse_rate_constant: 0.00019684754175582398
+- id: 12
+  reactants:
+    OH: 1
+    HO2: 1
+  products:
+    H2O: 1
+    O2: 1
+  reversible: true
+  forward:
+    A: 20000000.0
+    n: 0.0
+    activation_temperature_K: 0.0
+  fit_range_K:
+  - 300.0
+  - 2000.0
+  reference:
+    temperature_K: 1000.0
+    forward_rate_constant: 20000000.0
+    equilibrium_constant: 55271340794443.0
+    reverse_rate_constant: 3.6185118205076737e-07
+- id: 13
+  reactants:
+    HO2: 2
+  products:
+    H2O2: 1
+    O2: 1
+  reversible: true
+  forward:
+    A: 2000000.0
+    n: 0.0
+    activation_temperature_K: 0.0
+  fit_range_K:
+  - 300.0
+  - 1200.0
+  reference:
+    temperature_K: 1000.0
+    forward_rate_constant: 2000000.0
+    equilibrium_constant: 2516517.761614604
+    reverse_rate_constant: 0.7947490101229387
+- id: 14
+  reactants:
+    OH: 2
+  products:
+    H2O2: 1
+  reversible: true
+  forward:
+    A: 13000000000.0
+    n: -2.0
+    activation_temperature_K: 0.0
+  third_body:
+    default_efficiency: 1.0
+    efficiencies: {}
+  fit_range_K:
+  - 300.0
+  - 1500.0
+  reference:
+    temperature_K: 1000.0
+    forward_rate_constant: 13000.0
+    equilibrium_constant: 818.3094615421231
+    reverse_rate_constant: 15.886410473002718
+- id: 15
+  reactants:
+    H: 1
+    H2O2: 1
+  products:
+    H2: 1
+    HO2: 1
+  reversible: true
+  forward:
+    A: 1700000.0
+    n: 0.0
+    activation_temperature_K: 1888.0
+  fit_range_K:
+  - 300.0
+  - 800.0
+  reference:
+    temperature_K: 800.0
+    forward_rate_constant: 160514.379433714
+    equilibrium_constant: 567283.3016309766
+    reverse_rate_constant: 0.28295276623201254
+- id: 16
+  reactants:
+    H: 1
+    H2O2: 1
+  products:
+    H2O: 1
+    OH: 1
+  reversible: true
+  forward:
+    A: 10000000.0
+    n: 0.0
+    activation_temperature_K: 1804.0
+  fit_range_K:
+  - 300.0
+  - 1000.0
+  reference:
+    temperature_K: 1000.0
+    forward_rate_constant: 1646390.132983796
+    equilibrium_constant: 8908405964008273.0
+    reverse_rate_constant: 1.848131012030142e-10
+- id: 17
+  reactants:
+    O: 1
+    H2O2: 1
+  products:
+    OH: 1
+    HO2: 1
+  reversible: true
+  forward:
+    A: 28000000.0
+    n: 0.0
+    activation_temperature_K: 3223.0
+  fit_range_K:
+  - 300.0
+  - 1000.0
+  reference:
+    temperature_K: 1000.0
+    forward_rate_constant: 1115390.4357111917
+    equilibrium_constant: 40373.8346455335
+    reverse_rate_constant: 27.626566698553262
+- id: 18
+  reactants:
+    OH: 1
+    H2O2: 1
+  products:
+    H2O: 1
+    HO2: 1
+  reversible: true
+  forward:
+    A: 7000000.0
+    n: 0.0
+    activation_temperature_K: 722.0
+  fit_range_K:
+  - 300.0
+  - 1000.0
+  reference:
+    temperature_K: 1000.0
+    forward_rate_constant: 3400458.0701271947
+    equilibrium_constant: 21963421.69227559
+    reverse_rate_constant: 0.15482369358336895

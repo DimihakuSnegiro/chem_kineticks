@@ -1,0 +1,22 @@
+mode: constant_density_energy
+temperature_K: 1100.0
+density_kg_m3: 0.18
+mole_fractions:
+  H2: 0.6667
+  O2: 0.3333
+  N2: 0.5
+time_end_s: 0.01
+reverse_rates: thermodynamic
+solver:
+  theta: 0.6
+  initial_step_s: 1.0e-08
+  min_step_s: 1.0e-18
+  max_step_s: 1.0e-06
+  relative_tolerance: 1.0e-06
+  absolute_tolerance_mol_m3: 1.0e-11
+  nonlinear_tolerance: 1.0e-05
+  max_newton_iterations: 30
+  max_steps: 2000000
+output:
+  csv: output/results.csv
+  save_every: 10

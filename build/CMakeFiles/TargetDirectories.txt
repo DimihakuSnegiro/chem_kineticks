@@ -1,3 +1,0 @@
-C:/chem_kinetics/build/CMakeFiles/chemar.dir
-C:/chem_kinetics/build/CMakeFiles/edit_cache.dir
-C:/chem_kinetics/build/CMakeFiles/rebuild_cache.dir
