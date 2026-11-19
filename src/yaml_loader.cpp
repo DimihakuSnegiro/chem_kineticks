@@ -11,7 +11,7 @@ static double number(const YAML::Node& n) {
     const double x = n.as<double>();
 
     if (!std::isfinite(x)) {
-        throw std::runtime_error("Nonfinite YAML number");
+        throw std::runtime_error("Число в YAML не является конечным");
     }
 
     return x;
@@ -21,7 +21,7 @@ static size_t positive_integer(const YAML::Node& n) {
     const auto v = n.as<long long>();
 
     if (v <= 0) {
-        throw std::runtime_error("Expected positive integer");
+        throw std::runtime_error("Ожидалось положительное целое число");
     }
 
     return size_t(v);
@@ -32,7 +32,7 @@ Input load(const std::filesystem::path& directory) {
     const auto sp = YAML::LoadFile((directory / "species.yaml").string());
 
     if (sp["model"].as<std::string>() != "Glushko_Gurvich") {
-        throw std::runtime_error("Unsupported thermo model");
+        throw std::runtime_error("Неподдерживаемая термодинамическая модель");
     }
 
     std::map<std::string, int> index;
@@ -44,7 +44,7 @@ Input load(const std::filesystem::path& directory) {
         if (s.name.empty()
             || s.name.find_first_of(",\r\n\"") != std::string::npos
             || index.count(s.name)) {
-            throw std::runtime_error("Invalid or duplicate species name");
+            throw std::runtime_error("Некорректное или повторяющееся имя вещества");
         }
 
         index[s.name] = int(in.mechanism.species.size());
@@ -54,7 +54,7 @@ Input load(const std::filesystem::path& directory) {
             const int count = a.second.as<int>();
 
             if (count <= 0) {
-                throw std::runtime_error("Invalid atom count");
+                throw std::runtime_error("Некорректное число атомов");
             }
 
             s.atoms.emplace(a.first.as<std::string>(), count);
@@ -64,7 +64,7 @@ Input load(const std::filesystem::path& directory) {
             ThermoInterval interval{number(p["T_min"]), number(p["T_max"]), {}};
 
             if (p["coefficients"].size() != 12) {
-                throw std::runtime_error("Expected 12 Gurvich coefficients");
+                throw std::runtime_error("Ожидалось 12 коэффициентов Гурвича");
             }
 
             for (size_t i = 0; i < 12; ++i) {
@@ -81,7 +81,7 @@ Input load(const std::filesystem::path& directory) {
         auto it = index.find(name);
 
         if (it == index.end()) {
-            throw std::runtime_error("Unknown species: " + name);
+            throw std::runtime_error("Неизвестное вещество: " + name);
         }
 
         return it->second;
@@ -96,14 +96,14 @@ Input load(const std::filesystem::path& directory) {
             const int v = item.second.as<int>();
 
             if (v <= 0 || !seen.insert(i).second) {
-                throw std::runtime_error("Invalid stoichiometric term");
+                throw std::runtime_error("Некорректный стехиометрический член");
             }
 
             result.push_back({i, v});
         }
 
         if (result.empty()) {
-            throw std::runtime_error("Empty reaction side");
+            throw std::runtime_error("Пустая сторона реакции");
         }
 
         return result;
@@ -117,7 +117,7 @@ Input load(const std::filesystem::path& directory) {
         };
 
         if (a.A < 0) {
-            throw std::runtime_error("Negative Arrhenius prefactor");
+            throw std::runtime_error("Отрицательный предэкспоненциальный множитель Аррениуса");
         }
 
         return a;
@@ -126,7 +126,7 @@ Input load(const std::filesystem::path& directory) {
     const auto reactions = YAML::LoadFile((directory / "reactions.yaml").string());
 
     if (reactions["units"].as<std::string>() != "SI_mol_m_s_K") {
-        throw std::runtime_error("Expected SI rate units");
+        throw std::runtime_error("Ожидались единицы скорости реакции в СИ");
     }
 
     for (const auto& node : reactions["reactions"]) {
@@ -145,7 +145,7 @@ Input load(const std::filesystem::path& directory) {
             const double base = number(body["default_efficiency"]);
 
             if (base < 0) {
-                throw std::runtime_error("Negative collider efficiency");
+                throw std::runtime_error("Отрицательная эффективность третьего тела");
             }
 
             r.efficiencies.assign(index.size(), base);
@@ -154,7 +154,7 @@ Input load(const std::filesystem::path& directory) {
                 const double v = number(e.second);
 
                 if (v < 0) {
-                    throw std::runtime_error("Negative collider efficiency");
+                    throw std::runtime_error("Отрицательная эффективность третьего тела");
                 }
 
                 r.efficiencies[find(e.first.as<std::string>())] = v;
@@ -169,7 +169,7 @@ Input load(const std::filesystem::path& directory) {
     const auto init = YAML::LoadFile((directory / "initial.yaml").string());
 
     if (init["mode"].as<std::string>() != "constant_density_energy") {
-        throw std::runtime_error("Only IPR=3 is implemented");
+        throw std::runtime_error("Реализован только режим IPR=3");
     }
 
     in.initial.temperature = number(init["temperature_K"]);
@@ -185,7 +185,7 @@ Input load(const std::filesystem::path& directory) {
         const double v = number(x.second);
 
         if (v < 0 || !composition.insert(i).second) {
-            throw std::runtime_error("Invalid composition");
+            throw std::runtime_error("Некорректный состав смеси");
         }
 
         in.initial.c[i] = v;
@@ -194,24 +194,22 @@ Input load(const std::filesystem::path& directory) {
     }
 
     if (!(sum > 0 && mean_mass > 0 && in.initial.density > 0)) {
-        throw std::runtime_error("Invalid initial state");
+        throw std::runtime_error("Некорректное начальное состояние");
     }
-
-    // Normalization cancels: c_i = rho*x_i / sum(x_k*M_k).
     for (double& c : in.initial.c) {
         c *= in.initial.density / mean_mass;
     }
 
     if (in.initial.temperature < in.mechanism.Tmin
         || in.initial.temperature > in.mechanism.Tmax) {
-        throw std::runtime_error("Initial temperature outside common thermo range");
+        throw std::runtime_error("Начальная температура вне общего термодинамического диапазона");
     }
 
     in.end_time = number(init["time_end_s"]);
     const auto mode = init["reverse_rates"].as<std::string>();
 
     if (mode != "thermodynamic" && mode != "explicit") {
-        throw std::runtime_error("Invalid reverse_rates");
+        throw std::runtime_error("Некорректное значение reverse_rates");
     }
 
     in.explicit_reverse = mode == "explicit";
@@ -219,7 +217,7 @@ Input load(const std::filesystem::path& directory) {
     if (in.explicit_reverse) {
         for (const auto& r : in.mechanism.reactions) {
             if (r.reversible && !r.reverse) {
-                throw std::runtime_error("Missing reverse Arrhenius parameters");
+                throw std::runtime_error("Не заданы параметры Аррениуса для обратной реакции");
             }
         }
     }
@@ -237,7 +235,7 @@ Input load(const std::filesystem::path& directory) {
     const size_t iterations = positive_integer(solver["max_newton_iterations"]);
 
     if (iterations > 1000) {
-        throw std::runtime_error("Too many Newton iterations");
+        throw std::runtime_error("Слишком большое число итераций Ньютона");
     }
 
     s.max_newton_iterations = int(iterations);
@@ -249,13 +247,13 @@ Input load(const std::filesystem::path& directory) {
           && s.atol > 0 && s.rtol > 0
           && s.nonlinear_tolerance > 0 && s.nonlinear_tolerance < 0.01
           && in.end_time > 0)) {
-        throw std::runtime_error("Invalid integration settings");
+        throw std::runtime_error("Некорректные параметры интегрирования");
     }
 
     in.csv = init["output"]["csv"].as<std::string>();
 
     if (in.csv.empty()) {
-        throw std::runtime_error("Empty CSV path");
+        throw std::runtime_error("Пустой путь к CSV");
     }
 
     in.save_every = positive_integer(init["output"]["save_every"]);

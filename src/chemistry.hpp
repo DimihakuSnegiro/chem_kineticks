@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-inline constexpr double R = 8.3144; // Original molar gas constant, J/(mol K).
+inline constexpr double R = 8.3144;
 inline constexpr double standard_pressure = 101325.0;
 
 struct Term {
@@ -40,8 +40,6 @@ struct Reaction {
     Arrhenius forward;
     std::optional<Arrhenius> reverse;
     bool reversible = true;
-
-    // Empty = no collider; otherwise [M] = sum efficiencies[i]*c[i].
     std::vector<double> efficiencies;
 };
 
@@ -65,7 +63,7 @@ struct State {
     double time = 0;
     double temperature = 0;
     double density = 0;
-    std::vector<double> c; // mol/m^3
+    std::vector<double> c;
 };
 
 struct RateConstants {
@@ -91,8 +89,8 @@ RateConstants rate_constants(const Mechanism& mechanism, size_t reaction,
 Rates rates(const Mechanism& mechanism, const State& state,
             bool explicit_reverse, bool jacobian = false);
 
-double energy(const Mechanism& mechanism, const State& state); // J/m^3
-double mass(const Mechanism& mechanism, const State& state); // kg/m^3
+double energy(const Mechanism& mechanism, const State& state);
+double mass(const Mechanism& mechanism, const State& state);
 double pressure(const State& state);
 
 double temperature(const Mechanism& mechanism, const std::vector<double>& c,

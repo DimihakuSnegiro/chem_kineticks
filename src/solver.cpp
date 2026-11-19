@@ -21,7 +21,7 @@ static std::vector<double> linear_solve(std::vector<std::vector<double>> a,
         }
 
         if (!std::isfinite(a[pivot][k]) || std::abs(a[pivot][k]) < 1e-30) {
-            throw std::runtime_error("Singular Newton matrix");
+            throw std::runtime_error("Вырожденная матрица метода Ньютона");
         }
 
         std::swap(a[k], a[pivot]);
@@ -50,7 +50,7 @@ static std::vector<double> linear_solve(std::vector<std::vector<double>> a,
         x[k] = v / a[k][k];
 
         if (!std::isfinite(x[k])) {
-            throw std::runtime_error("Nonfinite Newton update");
+            throw std::runtime_error("Поправка метода Ньютона не является конечным числом");
         }
     }
 
@@ -137,16 +137,15 @@ State implicit_step(const Mechanism& m, const State& old, double dt, double e0,
                     break;
                 }
             } catch (const std::runtime_error&) {
-                // Retry inside the physical temperature range.
             }
         }
 
         if (!improved) {
-            throw std::runtime_error("Newton line search failed");
+            throw std::runtime_error("Не удалось подобрать шаг метода Ньютона");
         }
     }
 
-    throw std::runtime_error("Chemical Newton iteration did not converge");
+    throw std::runtime_error("Метод Ньютона для химической системы не сошёлся");
 }
 
 static void csv_header(std::ofstream& out, const Mechanism& m) {
@@ -163,12 +162,12 @@ static void csv_row(std::ofstream& out, const State& s) {
     const double p = pressure(s);
 
     if (!std::isfinite(s.time + s.temperature + s.density + p)) {
-        throw std::runtime_error("Nonfinite CSV state");
+        throw std::runtime_error("Состояние для записи в CSV содержит неконечные числа");
     }
 
     for (double c : s.c) {
         if (c < 0 || !std::isfinite(c)) {
-            throw std::runtime_error("Invalid CSV concentration");
+            throw std::runtime_error("Некорректная концентрация для записи в CSV");
         }
     }
 
@@ -181,7 +180,7 @@ static void csv_row(std::ofstream& out, const State& s) {
     out << '\n';
 
     if (!out) {
-        throw std::runtime_error("CSV write failed");
+        throw std::runtime_error("Ошибка записи CSV");
     }
 }
 
@@ -205,7 +204,7 @@ Statistics integrate(const Input& in) {
     std::ofstream out(in.csv);
 
     if (!out) {
-        throw std::runtime_error("Cannot open CSV: " + in.csv.string());
+        throw std::runtime_error("Не удалось открыть CSV: " + in.csv.string());
     }
 
     out << std::setprecision(17);
@@ -226,13 +225,13 @@ Statistics integrate(const Input& in) {
 
     while (state.time < in.end_time) {
         if (++attempts > cfg.max_steps) {
-            throw std::runtime_error("Step attempt limit reached");
+            throw std::runtime_error("Достигнут предел числа попыток шага");
         }
 
         dt = std::min(dt, in.end_time - state.time);
 
         if (state.time + dt == state.time) {
-            throw std::runtime_error("Step cannot advance floating-point time");
+            throw std::runtime_error("Шаг слишком мал для увеличения времени при текущей точности вычислений");
         }
 
         double error = 0;
@@ -255,7 +254,7 @@ Statistics integrate(const Input& in) {
                 / (cfg.rtol * accepted.temperature));
 
             if (error > 1) {
-                reason = "local error exceeds tolerance";
+                reason = "локальная ошибка превышает допуск";
             }
         } catch (const std::runtime_error& e) {
             error = std::numeric_limits<double>::infinity();
@@ -267,14 +266,12 @@ Statistics integrate(const Input& in) {
             dt *= 0.5;
 
             if (dt < cfg.min_step) {
-                throw std::runtime_error("Minimum step reached at t="
+                throw std::runtime_error("Достигнут минимальный шаг при t="
                     + std::to_string(state.time) + ": " + reason);
             }
 
             continue;
         }
-
-        // Time belongs to the accepted macro step, avoiding half-step rounding duplicates.
         if (dt == in.end_time - state.time) {
             accepted.time = in.end_time;
         } else {
@@ -298,7 +295,7 @@ Statistics integrate(const Input& in) {
         if (stats.max_mass_error > 1e-8
             || stats.max_energy_error > 1e-9
             || stats.max_atom_error > 1e-8) {
-            throw std::runtime_error("Conservation check failed");
+            throw std::runtime_error("Проверка законов сохранения не пройдена");
         }
 
         if (stats.accepted % in.save_every == 0 || state.time == in.end_time) {
@@ -312,7 +309,7 @@ Statistics integrate(const Input& in) {
     out.close();
 
     if (!out) {
-        throw std::runtime_error("CSV close/flush failed");
+        throw std::runtime_error("Ошибка закрытия или сброса буфера CSV");
     }
 
     stats.final = state;

@@ -8,7 +8,7 @@
 
 Thermo thermo(const Species& sp, double T) {
     if (!std::isfinite(T) || T < sp.thermo.front().Tmin || T > sp.thermo.back().Tmax) {
-        throw std::runtime_error("Temperature outside thermo range for " + sp.name);
+        throw std::runtime_error("Температура вне термодинамического диапазона для " + sp.name);
     }
 
     const ThermoInterval* interval = &sp.thermo.back();
@@ -35,7 +35,7 @@ Thermo thermo(const Species& sp, double T) {
                      + x * (2 * b[8] + x * (3 * b[9] + x * 4 * b[10]));
 
     if (!(cp > R) || !std::isfinite(h + s + cp)) {
-        throw std::runtime_error("Invalid thermodynamics for " + sp.name);
+        throw std::runtime_error("Некорректные термодинамические данные для " + sp.name);
     }
 
     return {cp, cp - R, h, s, h - R * T};
@@ -43,7 +43,7 @@ Thermo thermo(const Species& sp, double T) {
 
 void prepare(Mechanism& m) {
     if (m.species.empty() || m.reactions.empty()) {
-        throw std::runtime_error("Empty mechanism");
+        throw std::runtime_error("Пустой механизм реакций");
     }
 
     m.Tmin = 0;
@@ -51,7 +51,7 @@ void prepare(Mechanism& m) {
 
     for (const auto& s : m.species) {
         if (!(s.molar_mass > 0) || s.atoms.empty() || s.thermo.empty()) {
-            throw std::runtime_error("Invalid species " + s.name);
+            throw std::runtime_error("Некорректные данные вещества " + s.name);
         }
 
         for (size_t k = 0; k < s.thermo.size(); ++k) {
@@ -59,12 +59,12 @@ void prepare(Mechanism& m) {
 
             if (!(p.Tmin > 0 && p.Tmax > p.Tmin)
                 || (k && p.Tmin != s.thermo[k - 1].Tmax)) {
-                throw std::runtime_error("Invalid thermo intervals for " + s.name);
+                throw std::runtime_error("Некорректные термодинамические интервалы для " + s.name);
             }
 
             for (double v : p.b) {
                 if (!std::isfinite(v)) {
-                    throw std::runtime_error("Nonfinite coefficient");
+                    throw std::runtime_error("Коэффициент не является конечным числом");
                 }
             }
         }
@@ -74,7 +74,7 @@ void prepare(Mechanism& m) {
     }
 
     if (m.Tmin >= m.Tmax) {
-        throw std::runtime_error("No common temperature interval");
+        throw std::runtime_error("Нет общего температурного интервала");
     }
 
     m.stoichiometry.clear();
@@ -97,7 +97,7 @@ void prepare(Mechanism& m) {
 
         for (auto [i, nu] : net) {
             if (i < 0 || size_t(i) >= m.species.size()) {
-                throw std::runtime_error("Species index out of range");
+                throw std::runtime_error("Индекс вещества вне допустимого диапазона");
             }
 
             if (nu) {
@@ -114,12 +114,12 @@ void prepare(Mechanism& m) {
 
         for (const auto& [a, n] : atoms) {
             if (n) {
-                throw std::runtime_error("Reaction does not conserve " + a);
+                throw std::runtime_error("Реакция не сохраняет число атомов элемента " + a);
             }
         }
 
         if (std::abs(dm) > 1e-12 * scale) {
-            throw std::runtime_error("Reaction does not conserve mass");
+            throw std::runtime_error("Реакция не сохраняет массу");
         }
 
         m.stoichiometry.push_back(terms);
@@ -136,7 +136,7 @@ double arrhenius(const Arrhenius& a, double T) {
                               - a.activation_temperature / t) * (T / t);
 
     if (!std::isfinite(k)) {
-        throw std::runtime_error("Arrhenius overflow");
+        throw std::runtime_error("Переполнение при вычислении константы Аррениуса");
     }
 
     return k;
@@ -160,7 +160,7 @@ RateConstants rate_constants(const Mechanism& m, size_t j, double T, bool explic
     if (r.reversible) {
         if (explicit_reverse) {
             if (!r.reverse) {
-                throw std::runtime_error("Explicit reverse parameters missing");
+                throw std::runtime_error("Не заданы явные параметры обратной реакции");
             }
 
             kr = arrhenius(*r.reverse, T);
@@ -170,7 +170,7 @@ RateConstants rate_constants(const Mechanism& m, size_t j, double T, bool explic
     }
 
     if (!std::isfinite(kr)) {
-        throw std::runtime_error("Reverse rate overflow");
+        throw std::runtime_error("Переполнение константы скорости обратной реакции");
     }
 
     return {kf, kr, logK};
@@ -211,7 +211,7 @@ Rates rates(const Mechanism& m, const State& s, bool explicit_reverse, bool jaco
 
     for (size_t i = 0; i < n; ++i) {
         if (s.c[i] < 0 || !std::isfinite(s.c[i])) {
-            throw std::runtime_error("Invalid concentration");
+            throw std::runtime_error("Некорректная концентрация");
         }
 
         const auto th = thermo(m.species[i], s.temperature);
@@ -220,7 +220,7 @@ Rates rates(const Mechanism& m, const State& s, bool explicit_reverse, bool jaco
     }
 
     if (!(cv > 0)) {
-        throw std::runtime_error("Zero volumetric heat capacity");
+        throw std::runtime_error("Неположительная объёмная теплоёмкость");
     }
 
     auto dlogk = [&](const Arrhenius& a) {
@@ -248,7 +248,7 @@ Rates rates(const Mechanism& m, const State& s, bool explicit_reverse, bool jaco
         const double wr = k.reverse * pr * collider;
 
         if (!std::isfinite(wf + wr)) {
-            throw std::runtime_error("Reaction rate overflow");
+            throw std::runtime_error("Переполнение скорости реакции");
         }
 
         result.forward.push_back(wf);
@@ -267,8 +267,6 @@ Rates rates(const Mechanism& m, const State& s, bool explicit_reverse, bool jaco
         for (auto t : m.stoichiometry[j]) {
             du += t.coefficient * u[t.species];
         }
-
-        // d ln Kc/dT = Δu/(R T²); dT/dc_i at fixed energy = -u_i/Cv_volume.
         double dr;
 
         if (explicit_reverse && r.reversible) {
@@ -352,7 +350,7 @@ double temperature(const Mechanism& m, const std::vector<double>& c,
     };
 
     if (eval(lo)[0] > 0 || eval(hi)[0] < 0) {
-        throw std::runtime_error("Energy root outside thermo range");
+        throw std::runtime_error("Решение уравнения энергии вне термодинамического диапазона");
     }
 
     double T = std::clamp(guess, lo, hi);
@@ -361,11 +359,8 @@ double temperature(const Mechanism& m, const std::vector<double>& c,
         const auto v = eval(T);
 
         if (!(v[1] > 0)) {
-            throw std::runtime_error("Nonpositive heat capacity in energy solve");
+            throw std::runtime_error("Неположительная теплоёмкость при решении уравнения энергии");
         }
-
-        // Thermodynamic error must stay below the chemical Newton residual,
-        // including close to equilibrium when forward/reverse rates cancel.
         if (std::abs(v[0]) <= 1e-14 * std::max(1.0, std::abs(target))) {
             return T;
         }
@@ -385,5 +380,5 @@ double temperature(const Mechanism& m, const std::vector<double>& c,
         }
     }
 
-    throw std::runtime_error("Energy Newton iteration did not converge");
+    throw std::runtime_error("Метод Ньютона для уравнения энергии не сошёлся");
 }

@@ -36,8 +36,6 @@ struct Statistics {
 };
 
 Input load(const std::filesystem::path& directory);
-
-// Exposed for verification of the discrete theta equation.
 State implicit_step(const Mechanism& mechanism, const State& old,
                     double dt, double energy0,
                     const Settings& settings, bool explicit_reverse);

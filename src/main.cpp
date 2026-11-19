@@ -6,7 +6,7 @@
 int main(int argc, char** argv) {
     try {
         if (argc > 2) {
-            std::cerr << "Usage: chemar [data_directory]\n";
+            std::cerr << "Использование: chemar [каталог_данных]\n";
             return 2;
         }
 
@@ -21,12 +21,12 @@ int main(int argc, char** argv) {
 
         std::cout << std::setprecision(12)
                   << "CSV: " << input.csv.string()
-                  << "\nAccepted: " << result.accepted
-                  << ", rejected: " << result.rejected
-                  << "\nFinal time [s]: " << result.final.time
-                  << "\nFinal T [K]: " << result.final.temperature
-                  << "\nFinal p [Pa]: " << pressure(result.final)
-                  << "\nMax relative mass / energy / atom errors: " << result.max_mass_error
+                  << "\nПринято шагов: " << result.accepted
+                  << ", отклонено: " << result.rejected
+                  << "\nКонечное время [с]: " << result.final.time
+                  << "\nКонечная температура [К]: " << result.final.temperature
+                  << "\nКонечное давление [Па]: " << pressure(result.final)
+                  << "\nМаксимальные относительные ошибки массы / энергии / числа атомов: " << result.max_mass_error
                   << " / " << result.max_energy_error
                   << " / " << result.max_atom_error << '\n';
     } catch (const std::exception& e) {
